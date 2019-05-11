@@ -195,10 +195,15 @@ void ConsoleLog(const XLoggerInfo* _info, const char* _log)
     const char* file_name = ExtractFileName(_info->filename);
     
     char log[16 * 1024] = {0};
-    snprintf(log, sizeof(log), "[%s][%s][%s, %s, %d][%s", levelStrings[_info->level], NULL == _info->tag ? "" : _info->tag, file_name, strFuncName, _info->line, _log);
+    const int msgLen = snprintf(log, sizeof(log), "[%s][%s][%s, %s, %d][%s", levelStrings[_info->level], NULL == _info->tag ? "" : _info->tag, file_name, strFuncName, _info->line, _log);
     
-    
-    NSLog(@"%@", [NSString stringWithUTF8String:log]);
+
+    struct iovec v[2]; 
+    v[0].iov_base = log;
+    v[0].iov_len = msgLen;
+    v[1].iov_base = "\n";
+    v[1].iov_len = 1;
+    writev(STDERR_FILENO, v, 2);
 }
 
 bool isNetworkConnected()
