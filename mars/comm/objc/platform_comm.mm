@@ -6,6 +6,7 @@
 
 #import <Foundation/Foundation.h>
 #include <unistd.h>
+#include "mars/comm/ptrbuffer.h"
 
 #include "comm/xlogger/xlogger.h"
 #include "comm/xlogger/loginfo_extract.h"
@@ -37,6 +38,9 @@
 #include "comm/thread/mutex.h"
 #include "comm/thread/lock.h"
 #include "comm/network/getifaddrs.h"
+
+
+extern void log_formater(const XLoggerInfo* _info, const char* _logbody, PtrBuffer& _log);
 
 #if !TARGET_OS_IPHONE
 static float __GetSystemVersion() {
@@ -180,25 +184,12 @@ void ConsoleLog(const XLoggerInfo* _info, const char* _log)
     SCOPE_POOL();
 
     if (NULL==_info || NULL==_log) return;
-    
-    static const char* levelStrings[] = {
-        "V",
-        "D",  // debug
-        "I",  // info
-        "W",  // warn
-        "E",  // error
-        "F"  // fatal
-    };
-    
-    char strFuncName[128]  = {0};
-    ExtractFunctionName(_info->func_name, strFuncName, sizeof(strFuncName));
-    
-    const char* file_name = ExtractFileName(_info->filename);
-    
-    char log[16 * 1024] = {0};
-    const int msgLen = snprintf(log, sizeof(log), "[%s][%s][%s, %s, %d][%s\n", levelStrings[_info->level], NULL == _info->tag ? "" : _info->tag, file_name, strFuncName, _info->line, _log);
-    
-    write(STDERR_FILENO,(const void*)log,(size_t)msgLen);
+
+    char temp[16 * 1024] = {0};     
+    PtrBuffer log(temp, 0, sizeof(temp));
+    log_formater(_info, _log, log);
+
+    write(STDERR_FILENO,(const void*)(log.Ptr()),(size_t)(log.Length()));
 }
 
 bool isNetworkConnected()
